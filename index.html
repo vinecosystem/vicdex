@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- (VN) Cơ bản -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- (VN) Tiêu đề + slogan -->
+  <title>VicDex — Simple swaps on Viction</title>
+  <meta name="description" content="VicDex — Simple swaps on Viction. Create pools, provide liquidity, and swap VRC25 ↔ VIC with no platform fees." />
+  <meta name="theme-color" content="#0B1020" />
+
+  <!-- (VN) Icon/Logo: để cùng thư mục -->
+  <link rel="icon" type="image/png" href="vicdex_128.png">
+  <link rel="apple-touch-icon" href="vicdex_180.png" sizes="180x180">
+
+  <!-- (VN) Open Graph -->
+  <meta property="og:title" content="VicDex — Simple swaps on Viction" />
+  <meta property="og:description" content="Create pools, provide liquidity, and swap VRC25 ↔ VIC with no platform fees." />
+  <meta property="og:image" content="vicdex_180.png" />
+  <meta property="og:type" content="website" />
+
+  <!-- (VN) Cấu hình cho app.js -->
+  <meta name="vicdex-factory-address" content="0x2984ec46204994A0a28Df996A6F54701bb463974" />
+  <meta name="vicdex-chain-id" content="88" />
+  <meta name="vicdex-rpc" content="https://rpc.viction.xyz" />
+  <meta name="vicdex-factory-abi" content="inline" />
+  <meta name="vicdex-pool-abi" content="inline" />
+  <meta name="vicdex-guide-link" content="">
+
+  <!-- (VN) CSS & JS -->
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js" defer></script>
+  <!-- (VN) Khi cập nhật app.js, có thể thêm ?v=2 để chống cache -->
+  <script src="app.js?v=5" type="module" defer></script>
+</head>
+
+<body>
+  <!-- ===================== Header ===================== -->
+  <header class="vx-header">
+    <div class="vx-container header-grid">
+      <a class="brand" href="#" aria-label="VicDex Home">
+        <img src="vicdex_128.png" alt="VicDex" width="32" height="32" />
+        <div class="brand-text">
+          <span class="brand-name">VicDex</span>
+          <span class="tagline">Simple swaps on Viction</span>
+        </div>
+      </a>
+
+      <!-- (VN) Hamburger cho mobile -->
+      <input type="checkbox" id="navToggle" class="nav-toggle" aria-label="Toggle menu">
+      <label for="navToggle" class="burger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </label>
+
+      <!-- (VN) Điều hướng: 3 mục gọn -->
+      <nav class="top-nav">
+        <a href="#swap" class="tab-link">Swap</a>
+        <a href="#liquidity" class="tab-link">Liquidity</a>
+        <a href="#pools" class="tab-link">Pools</a>
+      </nav>
+
+      <div class="header-actions">
+        <span id="networkBadge" class="badge">Viction · Chain 88</span>
+        <button id="switchNetworkBtn" class="btn ghost">Switch</button>
+        <button id="connectBtn" class="btn primary">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== Main ===================== -->
+  <main class="vx-main vx-container">
+
+    <!-- ========== SWAP (mặc định hiện) ========== -->
+    <section id="swap" class="view-section visible-by-default card">
+      <div class="card-header">
+        <h2>Swap</h2>
+        <p class="sub">Pick tokens, enter amount, tap Swap. Use the arrow to flip directions.</p>
+      </div>
+
+      <!-- (VN) Hộp swap 2 cột + nút đảo chiều ở giữa -->
+      <div class="swap-grid">
+        <!-- FROM -->
+        <div class="swap-box">
+          <div class="token-row">
+            <button id="swap_from_token_btn" class="token-btn">
+              <span class="token-dot"></span>
+              <span id="swap_from_symbol">VIC</span>
+              <svg viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <span class="muted mini">From</span>
+          </div>
+          <input id="swap_from_amount" class="amount-input" type="number" min="0" step="any" placeholder="0.0" />
+        </div>
+
+        <!-- Nút đảo chiều -->
+        <button id="swap_flip_btn" class="flip-btn" aria-label="Flip">
+          <svg viewBox="0 0 24 24"><path d="M7 7h11v4M6 7l3-3m8 13H6v-4m9 7l3-3"/></svg>
+        </button>
+
+        <!-- TO -->
+        <div class="swap-box">
+          <div class="token-row">
+            <button id="swap_to_token_btn" class="token-btn">
+              <span class="token-dot"></span>
+              <span id="swap_to_symbol">Select token</span>
+              <svg viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <span class="muted mini">To</span>
+          </div>
+          <input id="swap_to_amount" class="amount-input" type="number" min="0" step="any" placeholder="0.0" readonly />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="sw_quoteBtn" class="btn ghost">Get Quote</button>
+        <button id="swap_execute_btn" class="btn primary">Swap</button>
+        <div id="sw_status" class="status"></div>
+      </div>
+
+      <!-- (VN) Token picker dạng dropdown overlay: FROM -->
+      <div id="picker_from" class="picker hide" role="dialog" aria-modal="true">
+        <div class="picker-card">
+          <div class="picker-head">
+            <h3>Select a token</h3>
+            <button class="picker-close" data-close="#picker_from">×</button>
+          </div>
+          <input id="picker_from_search" class="picker-search" placeholder="Search by symbol or paste address" />
+          <ul id="picker_from_list" class="picker-list">
+            <!-- (VN) app.js sẽ render danh sách: VIC + các token có pool -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- (VN) Token picker: TO -->
+      <div id="picker_to" class="picker hide" role="dialog" aria-modal="true">
+        <div class="picker-card">
+          <div class="picker-head">
+            <h3>Select a token</h3>
+            <button class="picker-close" data-close="#picker_to">×</button>
+          </div>
+          <input id="picker_to_search" class="picker-search" placeholder="Search by symbol or paste address" />
+          <ul id="picker_to_list" class="picker-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== LIQUIDITY ========== -->
+    <section id="liquidity" class="view-section card">
+      <div class="card-header">
+        <h2>Liquidity</h2>
+        <p class="sub">Provide or remove liquidity. Tokens with existing pools appear in the picker.</p>
+      </div>
+
+      <!-- (VN) Cung cấp thanh khoản: luôn 1 bên là VIC, bên còn lại chọn token -->
+      <div class="subcard">
+        <h3>Provide Liquidity (VIC ↔ Token)</h3>
+
+        <div class="two-cols">
+          <!-- VIC side -->
+          <div class="liq-box">
+            <div class="token-row">
+              <button class="token-btn" disabled>
+                <span class="token-dot"></span>
+                <span>VIC</span>
+              </button>
+              <span class="muted mini">VIC amount</span>
+            </div>
+            <input id="liq_vic_amount" class="amount-input" type="number" min="0" step="any" placeholder="0.0" />
+          </div>
+
+          <!-- TOKEN side -->
+          <div class="liq-box">
+            <div class="token-row">
+              <button id="liq_token_btn" class="token-btn">
+                <span class="token-dot"></span>
+                <span id="liq_token_symbol">Select token</span>
+                <svg viewBox="0 0 24 24" class="chev"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <span class="muted mini">Token amount</span>
+            </div>
+            <input id="liq_token_amount" class="amount-input" type="number" min="0" step="any" placeholder="0.0" />
+          </div>
+        </div>
+        <div class="actions">
+              <button id="liq_supply_btn" class="btn primary" title="Will auto-approve if needed">Supply</button>
+            <div id="liq_status" class="status"></div>
+        </div>
+        <!-- (VN) Token picker cho Liquidity -->
+        <div id="picker_liq" class="picker hide" role="dialog" aria-modal="true">
+          <div class="picker-card">
+            <div class="picker-head">
+              <h3>Select a token</h3>
+              <button class="picker-close" data-close="#picker_liq">×</button>
+            </div>
+            <input id="picker_liq_search" class="picker-search" placeholder="Search by symbol or paste address" />
+            <ul id="picker_liq_list" class="picker-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- (VN) Vị thế của bạn: rút theo % -->
+      <div class="subcard">
+        <h3>Your Positions</h3>
+        <div id="positions_list" class="pool-list">
+          <div class="muted">No positions yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== POOLS ========== -->
+    <section id="pools" class="view-section card">
+      <div class="card-header">
+        <h2>Pools</h2>
+        <p class="sub">Browse pools. Tokens with liquidity will appear here.</p>
+      </div>
+
+      <div id="pools_list" class="pool-list">
+        <div class="muted">No pools to display yet.</div>
+      </div>
+    </section>
+
+    <section class="note">
+      <p class="muted">
+        AMM x·y=k. LPs capture 100% of fees via price impact; pool fee is set on creation. No platform fees.
+      </p>
+    </section>
+  </main>
+
+<!-- ===================== Footer ===================== -->
+  <footer class="vx-footer">
+    <div class="vx-container">
+      <span>© <span id="year"></span> VicDex</span>
+      <a href="https://lottery.vin" target="_blank" rel="noopener">Home</a>
+      <a id="guideLinkFoot" href="https://docs.google.com/document/d/1kGE_m83vFqsL8g3FuPimvPeU_QvnpxvS/edit" target="_blank" rel="noopener">Guide</a>
+      <a href="https://t.me/FortuneRolls" target="_blank" rel="noopener">Telegram</a>
+      <a href="https://x.com/FortuneRolls" target="_blank" rel="noopener">X</a>
+      <a href="https://vicscan.xyz/address/0x2984ec46204994A0a28Df996A6F54701bb463974" target="_blank" rel="noopener">Factory</a>
+    </div>
+  </footer>
+
+  <!-- (VN) Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
