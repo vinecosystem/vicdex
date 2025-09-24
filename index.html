@@ -90,7 +90,11 @@
             </button>
             <span class="muted mini">From</span>
           </div>
-          <input id="swap_from_amount" class="amount-input" type="number" min="0" step="any" placeholder="0.0" />
+
+          <!-- (VN) FIX cho mobile: dùng text + inputmode=decimal để có phím "." -->
+          <input id="swap_from_amount" class="amount-input"
+                 type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done"
+                 placeholder="0.0" />
         </div>
 
         <!-- Nút đảo chiều -->
@@ -108,7 +112,11 @@
             </button>
             <span class="muted mini">To</span>
           </div>
-          <input id="swap_to_amount" class="amount-input" type="number" min="0" step="any" placeholder="0.0" readonly />
+
+          <!-- (VN) FIX cho mobile: text + inputmode=decimal; readonly để chỉ hiển thị quote -->
+          <input id="swap_to_amount" class="amount-input"
+                 type="text" inputmode="decimal" autocomplete="off"
+                 placeholder="0.0" readonly />
         </div>
       </div>
 
