@@ -5,6 +5,7 @@
    - Pool reserves + explorer link
    - One-tap Supply (auto-approve nếu cần)
    - Robust createPool (estimateGas + staticCall)
+   - FIX (Mobile): Chuẩn hoá thập phân (, → .) để ô "To" tự nhảy
    ========================================================== */
 (() => {
   'use strict';
@@ -22,6 +23,16 @@
   const debounce = (fn,ms=240)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
   const isAddr = (s)=>{ try{ return ethers.isAddress((s||"").trim()); }catch{ return false; } };
   const errMsg = (e)=> e?.reason || e?.shortMessage || e?.message || String(e);
+
+  // (FIX Mobile) Chuẩn hoá chuỗi số thập phân và parse an toàn
+  function parseDec(inputElOrStr){
+    const raw = (typeof inputElOrStr === "string" ? inputElOrStr : (inputElOrStr?.value||"")).trim();
+    if (!raw) return NaN;
+    const norm = raw.replace(/,/g, ".").replace(/\s+/g, ""); // "10,5" -> "10.5"
+    if (!/^\d*\.?\d*$/.test(norm)) return NaN;              // chỉ cho phép số và 1 dấu '.'
+    const v = Number(norm);
+    return Number.isFinite(v) ? v : NaN;
+  }
 
   function toast(msg, kind="ok"){
     const box = $("#toast");
@@ -161,7 +172,7 @@
       window.ethereum?.on?.("chainChanged", ()=> location.reload());
 
       attachHandlers();
-      mobileNavFallback();                 // <— NEW: hamburger cho mobile
+      mobileNavFallback();                 // hamburger cho mobile
       await refreshRegistry();
       renderAllPickers();
       attachLiquiditySync();
@@ -453,9 +464,13 @@
     try{
       $swStatus && ($swStatus.textContent="");
       $swapToAmt && ($swapToAmt.value="");
-      if(!toToken) return;
-      const amtIn = Number($swapFromAmt?.value||"0");
-      if(amtIn<=0) return;
+
+      // (FIX) Nhắc chọn token "To"
+      if(!toToken){ $swStatus && ($swStatus.textContent="Please select the ‘To’ token."); return; }
+
+      // (FIX Mobile) Dùng parseDec thay cho Number
+      const amtIn = parseDec($swapFromAmt);
+      if(!(amtIn>0)) return;
 
       const tokenSide = (fromToken.address==="VIC")?toToken:fromToken;
       const dec = tokenSide.decimals ?? await getDecimals(tokenSide.address);
@@ -489,8 +504,9 @@
       if(!poolAddr || poolAddr===ethers.ZeroAddress) return toast("Pool not found.","err");
       const p = poolAt(poolAddr);
 
-      const amtInNum = Number($swapFromAmt?.value||"0");
-      if(amtInNum<=0) return toast("Enter amount.","warn");
+      // (FIX Mobile) Dùng parseDec để không dính NaN từ "10,5"
+      const amtInNum = parseDec($swapFromAmt);
+      if(!(amtInNum>0)) return toast("Enter amount.","warn");
 
       const { vic, tok } = await p.getReserves();
       let inBN, outBN;
